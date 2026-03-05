@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0A0A0A;
+  --foreground: #FAFAFA;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  text-transform: uppercase;
+}
+
+@layer utilities {
+  .brutal-card {
+    @apply bg-brutalBlack border-brutal border-accentMain text-brutalWhite overflow-hidden;
+  }
+
+  .brutal-btn {
+    @apply font-black bg-accentMain border-brutal border-accentMain text-brutalWhite px-6 py-3 uppercase transition-colors hover:bg-accentHover hover:text-brutalBlack focus:outline-none focus:ring-4 focus:ring-brutalBlack;
+  }
+}
