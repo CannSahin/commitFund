@@ -17,7 +17,7 @@ const rpcServer = new rpc.Server(SERVER_URL, { allowHttp: true });
 // Testnet Native XLM Wrapped Token ID (Soroban SAC)
 const TESTNET_XLM_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
-export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "C_REPLACE_WITH_DEPLOYED_CONTRACT_ID";
+export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "CAUFPZT7Z44CN55IWTFEBJALHCP2YPQD6XRXODHLUVQLEFQA63DSMCCT";
 
 export interface ProjectData {
     id: number;
@@ -67,27 +67,54 @@ async function sendAndPollTransaction(signedTxXdr: string) {
 }
 
 export async function fetchProjects(): Promise<ProjectData[]> {
-    // Gerçek uygulamada contract.call("get_projects") kullanılarak datalar çekilebilir. Demo için mock veriliyor.
-    return [
-        {
-            id: 1,
-            title: "SOROBAN LENDING PROTOCOL",
-            owner: "G_MOCK...",
-            goal: 200000,
-            stake: 50000,
-            funded: 120000,
-            isActive: true
-        },
-        {
-            id: 2,
-            title: "STELLAR DECENTRALIZED DEX",
-            owner: "G_MOCK...",
-            goal: 100000,
-            stake: 25000,
-            funded: 90000,
-            isActive: true
+    try {
+        const contract = new Contract(CONTRACT_ID);
+
+        // Simülasyon yaparak veriyi çekiyoruz (salt-okunur işlem)
+        // Not: Gerçek bir uygulamada 'get_projects' fonksiyonunun argüman alıp almadığına bakılmalıdır.
+        // Genellikle tüm projeleri dönen bir getter olur.
+
+        const nullAccount = new Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF", "0");
+        const tx = new TransactionBuilder(nullAccount, {
+            fee: "100",
+            networkPassphrase: NETWORK_PASSPHRASE,
+        })
+            .addOperation(contract.call("get_projects"))
+            .setTimeout(30)
+            .build();
+
+        const result = await rpcServer.simulateTransaction(tx);
+
+        if (rpc.Api.isSimulationSuccess(result)) {
+            // Soroban ScVal'ı JS objesine dönüştürme (basitleştirilmiş)
+            // Gerçek projede SDK'nın ScVal parser'ları kullanılır
+            const scVal = result.result!.retval;
+            // ScVal -> JSON dönüşümü SDK versiyonuna göre değişebilir
+            // @ts-ignore
+            const projects = scVal.value().map((p: any) => {
+                const map = p.map();
+                const getVal = (key: string) => {
+                    const entry = map.find((e: any) => e.key().string() === key);
+                    return entry ? entry.val() : null;
+                };
+
+                return {
+                    id: Number(getVal("id").u32()),
+                    title: getVal("title").string(),
+                    owner: getVal("owner").address().toString(),
+                    goal: Number(getVal("goal").u128()) / 10_000_000,
+                    stake: Number(getVal("stake").u128()) / 10_000_000,
+                    funded: Number(getVal("funded").u128()) / 10_000_000,
+                    isActive: getVal("is_active").bool()
+                };
+            });
+            return projects;
         }
-    ];
+        return [];
+    } catch (err) {
+        console.error("Projeler çekilirken hata:", err);
+        return [];
+    }
 }
 
 // initialize: Kontratı ilk kez başlatmak için çağrılır (admin ve token adresi kaydedilir).

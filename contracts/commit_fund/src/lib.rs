@@ -136,4 +136,21 @@ impl CommitFundContract {
 
         Ok(())
     }
+
+    /// Belirli bir projeyi getirir.
+    pub fn get_project(env: Env, project_id: u32) -> Option<Project> {
+        env.storage().persistent().get(&DataKey::Project(project_id))
+    }
+
+    /// Tüm projeleri getirir (basit implementasyon).
+    pub fn get_projects(env: Env) -> soroban_sdk::Vec<Project> {
+        let count: u32 = env.storage().instance().get(&DataKey::ProjectCounter).unwrap_or(0);
+        let mut projects = soroban_sdk::Vec::new(&env);
+        for i in 1..=count {
+            if let Some(project) = env.storage().persistent().get(&DataKey::Project(i)) {
+                projects.push_back(project);
+            }
+        }
+        projects
+    }
 }
