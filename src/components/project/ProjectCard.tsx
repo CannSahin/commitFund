@@ -57,24 +57,34 @@ export default function ProjectCard({ id, title, ownerStake, goal, funded }: Pro
                 {title}
             </h3>
 
-            {/* Vurgulanmış Skin in the Game kutusu */}
-            <div className="bg-brutalBlack text-accentMain p-4 mb-6 border-brutal border-brutalBlack transform -rotate-1">
-                <p className="font-mono text-xs font-bold mb-1 opacity-80 text-white">SKIN IN THE GAME</p>
-                <p className="font-mono text-2xl font-black">{ownerStake.toLocaleString("en-US")} XLM</p>
+            {/* Vurgulanmış Bilgi Kutuları */}
+            <div className="flex flex-col gap-4 mb-6 px-1">
+                <div className="bg-brutalBlack text-accentMain p-4 border-brutal border-accentMain transform -rotate-1 hover:rotate-0 transition-transform">
+                    <p className="font-mono text-xs font-bold mb-1 opacity-80 text-white uppercase tracking-widest">Owner Stake</p>
+                    <p className="font-mono text-2xl font-black">{ownerStake.toLocaleString("en-US")} XLM</p>
+                </div>
+
+                <div className="bg-brutalBlack text-white p-4 border-brutal border-brutalWhite transform rotate-1 hover:rotate-0 transition-transform">
+                    <p className="font-mono text-xs font-bold mb-1 opacity-80 uppercase tracking-widest">Funding Goal</p>
+                    <p className="font-mono text-2xl font-black text-accentMain">{goal.toLocaleString("en-US")} XLM</p>
+                </div>
             </div>
 
             <div className="flex-grow mt-auto flex flex-col justify-end">
-                {/* İlerleme Çubuğu - Brutalist Stil: Kalın siyah sınır, neon yeşil dolgu */}
-                <div className="w-full h-8 border-brutal border-brutalBlack bg-base relative mb-2">
-                    <div
-                        className="h-full bg-accentHover border-r-brutal border-brutalBlack"
-                        style={{ width: `${progressPercent}%` }}
-                    />
+                <div className="mb-2">
+                    <p className="font-mono text-xs font-bold mb-1 uppercase">Progress</p>
+                    {/* İlerleme Çubuğu - Brutalist Stil: Kalın siyah sınır, neon yeşil dolgu */}
+                    <div className="w-full h-8 border-brutal border-brutalBlack bg-zinc-800 relative">
+                        <div
+                            className="h-full bg-accentHover border-r-brutal border-brutalBlack"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex justify-between items-center font-mono font-bold mb-6 text-sm">
-                    <span>{funded.toLocaleString("en-US")} XLM RAISED</span>
-                    <span>{progressPercent}%</span>
+                    <span className="bg-accentMain px-2 py-0.5">{funded.toLocaleString("en-US")} XLM RAISED</span>
+                    <span className="bg-brutalBlack text-white px-2 py-0.5">{progressPercent}%</span>
                 </div>
 
                 {/* Yatırım Butonu */}

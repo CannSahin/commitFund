@@ -37,21 +37,6 @@ export default function Home() {
         <section className="py-24 px-6 max-w-7xl mx-auto w-full">
           <div className="flex items-center justify-between mb-12 border-b-brutal border-brutalBlack pb-4">
             <h2 className="text-5xl font-black">ACTIVE CAMPAIGNS</h2>
-            {isConnected && publicKey && (
-              <button
-                onClick={async () => {
-                  try {
-                    await initializeContract(publicKey);
-                    alert("Contract initialized successfully!");
-                  } catch (e: any) {
-                    alert("Initialization failed: " + e.message);
-                  }
-                }}
-                className="brutal-btn text-sm py-2 px-4 bg-red-500 text-white"
-              >
-                DEBUG: INIT CONTRACT
-              </button>
-            )}
           </div>
 
           {/* Grid Layout Brutalist Kartlar İçin */}

@@ -4,6 +4,7 @@ import {
     Networks,
     Address,
     nativeToScVal,
+    scValToNative,
     Contract,
     Account,
 } from "@stellar/stellar-sdk";
@@ -48,7 +49,23 @@ async function sendAndPollTransaction(signedTxXdr: string) {
     }
 
     if (sendResponse.status === "ERROR") {
-        throw new Error("Transaction processing failed");
+        console.error("Submission Error Details:", sendResponse);
+        let errorMsg = "Transaction submission failed";
+        try {
+            if (sendResponse.errorResult) {
+                // @ts-ignore
+                const result = sendResponse.errorResult;
+                // result is a TransactionResult object from the SDK
+                errorMsg += `: ${result.result().switch().name}`;
+                if (result.result().results()) {
+                    const opResults = result.result().results().map((r: any) => r.tr().switch().name);
+                    errorMsg += ` (Ops: ${opResults.join(", ")})`;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse errorResult:", e);
+        }
+        throw new Error(errorMsg);
     }
 
     let txStatus = await rpcServer.getTransaction(sendResponse.hash);
@@ -71,9 +88,6 @@ export async function fetchProjects(): Promise<ProjectData[]> {
         const contract = new Contract(CONTRACT_ID);
 
         // Simülasyon yaparak veriyi çekiyoruz (salt-okunur işlem)
-        // Not: Gerçek bir uygulamada 'get_projects' fonksiyonunun argüman alıp almadığına bakılmalıdır.
-        // Genellikle tüm projeleri dönen bir getter olur.
-
         const nullAccount = new Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF", "0");
         const tx = new TransactionBuilder(nullAccount, {
             fee: "100",
@@ -86,29 +100,19 @@ export async function fetchProjects(): Promise<ProjectData[]> {
         const result = await rpcServer.simulateTransaction(tx);
 
         if (rpc.Api.isSimulationSuccess(result)) {
-            // Soroban ScVal'ı JS objesine dönüştürme (basitleştirilmiş)
-            // Gerçek projede SDK'nın ScVal parser'ları kullanılır
             const scVal = result.result!.retval;
-            // ScVal -> JSON dönüşümü SDK versiyonuna göre değişebilir
-            // @ts-ignore
-            const projects = scVal.value().map((p: any) => {
-                const map = p.map();
-                const getVal = (key: string) => {
-                    const entry = map.find((e: any) => e.key().string() === key);
-                    return entry ? entry.val() : null;
-                };
+            // SDK'nın yerleşik scValToNative fonksiyonu ile Soroban verisini direkt JS objesine çeviriyoruz
+            const nativeProjects = scValToNative(scVal) as any[];
 
-                return {
-                    id: Number(getVal("id").u32()),
-                    title: getVal("title").string(),
-                    owner: getVal("owner").address().toString(),
-                    goal: Number(getVal("goal").u128()) / 10_000_000,
-                    stake: Number(getVal("stake").u128()) / 10_000_000,
-                    funded: Number(getVal("funded").u128()) / 10_000_000,
-                    isActive: getVal("is_active").bool()
-                };
-            });
-            return projects;
+            return nativeProjects.map((p, index) => ({
+                id: index + 1, // Kontratta id alanı şu an struct içinde değil
+                title: p.title || "Başlıksız Proje",
+                owner: p.owner || "Bilinmiyor",
+                goal: Number(p.goal) / 10_000_000,
+                stake: Number(p.stake) / 10_000_000,
+                funded: Number(p.total_contributions || 0) / 10_000_000,
+                isActive: !!p.is_active
+            }));
         }
         return [];
     } catch (err) {
@@ -122,7 +126,8 @@ export async function initializeContract(publicKey: string) {
     let allowed = await requestAccess();
     if (!allowed) throw new Error("Freighter kullanım izni verilmedi");
 
-    const sourceAccount = new Account(publicKey, "0");
+    // Kontratı başlatma işlemi: Önce ağdan güncel account (sequence number dahil) verisini çekiyoruz
+    const sourceAccount = await rpcServer.getAccount(publicKey);
     const contract = new Contract(CONTRACT_ID);
 
     // Rust args: (admin: Address, token: Address)
@@ -147,8 +152,9 @@ export async function initializeContract(publicKey: string) {
     }
     const signResult = await signTransaction(preparedTx!.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
     if (signResult.error) {
-        if (signResult.error.toLowerCase().includes("reject")) throw new Error("User Rejected");
-        throw new Error(signResult.error);
+        const errorMsg = typeof signResult.error === 'string' ? signResult.error : JSON.stringify(signResult.error);
+        if (errorMsg.toLowerCase().includes("reject")) throw new Error("User Rejected");
+        throw new Error(errorMsg);
     }
     return await sendAndPollTransaction(signResult.signedTxXdr);
 }
@@ -158,7 +164,8 @@ export async function createProject(publicKey: string, title: string, goal: numb
     let allowed = await requestAccess();
     if (!allowed) throw new Error("Freighter kullanım izni verilmedi");
 
-    const sourceAccount = new Account(publicKey, "0");
+    // Proje oluşturma işlemi: Önce ağdan güncel account (sequence number dahil) verisini çekiyoruz
+    const sourceAccount = await rpcServer.getAccount(publicKey);
     const contract = new Contract(CONTRACT_ID);
 
     // Rust argümanları: (owner: Address, goal: u128, stake: u128, title: String)
@@ -169,16 +176,17 @@ export async function createProject(publicKey: string, title: string, goal: numb
         nativeToScVal(title, { type: "string" }),
     ];
 
-    const tx = new TransactionBuilder(sourceAccount, {
-        fee: "100",
-        networkPassphrase: NETWORK_PASSPHRASE,
-    })
-        .addOperation(contract.call("create_project", ...args))
-        .setTimeout(30)
-        .build();
-
+    // Proje oluşturma işlemi için işlemi hazırla (sequence number ağdan gelenle basıldı)
     let preparedTx;
     try {
+        const tx = new TransactionBuilder(sourceAccount, {
+            fee: "100",
+            networkPassphrase: NETWORK_PASSPHRASE,
+        })
+            .addOperation(contract.call("create_project", ...args))
+            .setTimeout(30)
+            .build();
+
         preparedTx = await rpcServer.prepareTransaction(tx);
     } catch (err) {
         handleTransactionError(err);
@@ -189,10 +197,11 @@ export async function createProject(publicKey: string, title: string, goal: numb
     });
 
     if (signResult.error) {
-        if (signResult.error.toLowerCase().includes("reject") || signResult.error.toLowerCase().includes("decline")) {
+        const errorMsg = typeof signResult.error === 'string' ? signResult.error : JSON.stringify(signResult.error);
+        if (errorMsg.toLowerCase().includes("reject") || errorMsg.toLowerCase().includes("decline")) {
             throw new Error("User Rejected");
         }
-        throw new Error(signResult.error);
+        throw new Error(errorMsg);
     }
 
     return await sendAndPollTransaction(signResult.signedTxXdr);
@@ -203,7 +212,8 @@ export async function investInProject(publicKey: string, projectId: number, amou
     let allowed = await requestAccess();
     if (!allowed) throw new Error("Freighter kullanım izni verilmedi");
 
-    const sourceAccount = new Account(publicKey, "0");
+    // Yatırım işlemi: Önce ağdan güncel account (sequence number dahil) verisini çekiyoruz
+    const sourceAccount = await rpcServer.getAccount(publicKey);
     const contract = new Contract(CONTRACT_ID);
 
     // Rust argümanları: (investor: Address, project_id: u32, amount: u128)
@@ -213,16 +223,17 @@ export async function investInProject(publicKey: string, projectId: number, amou
         nativeToScVal(BigInt(Math.floor(amount * 10_000_000)), { type: "u128" }),
     ];
 
-    const tx = new TransactionBuilder(sourceAccount, {
-        fee: "100",
-        networkPassphrase: NETWORK_PASSPHRASE,
-    })
-        .addOperation(contract.call("contribute", ...args)) // ← gerçek fonksiyon adı: contribute
-        .setTimeout(30)
-        .build();
-
+    // Yatırım işlemi için işlemi hazırla (sequence number ağdan gelenle basıldı)
     let preparedTx;
     try {
+        const tx = new TransactionBuilder(sourceAccount, {
+            fee: "100",
+            networkPassphrase: NETWORK_PASSPHRASE,
+        })
+            .addOperation(contract.call("contribute", ...args))
+            .setTimeout(30)
+            .build();
+
         preparedTx = await rpcServer.prepareTransaction(tx);
     } catch (err) {
         handleTransactionError(err);
@@ -233,10 +244,11 @@ export async function investInProject(publicKey: string, projectId: number, amou
     });
 
     if (signResult.error) {
-        if (signResult.error.toLowerCase().includes("reject") || signResult.error.toLowerCase().includes("decline")) {
+        const errStr = typeof signResult.error === 'string' ? signResult.error : JSON.stringify(signResult.error);
+        if (errStr.toLowerCase().includes("reject") || errStr.toLowerCase().includes("decline")) {
             throw new Error("User Rejected");
         }
-        throw new Error(signResult.error);
+        throw new Error(errStr);
     }
 
     return await sendAndPollTransaction(signResult.signedTxXdr);
