@@ -17,7 +17,6 @@ export default function ProjectCard({ id, title, ownerStake, goal, funded }: Pro
     const { isConnected, publicKey } = useWallet();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Fonlanma yüzdesini hesaplıyoruz
     const progressPercent = Math.min(Math.round((funded / goal) * 100), 100);
 
     const handleInvest = async () => {
@@ -52,12 +51,10 @@ export default function ProjectCard({ id, title, ownerStake, goal, funded }: Pro
 
     return (
         <div className="brutal-card flex flex-col p-6 hover:-translate-y-2 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-200">
-            {/* Kart Başlığı */}
             <h3 className="text-2xl font-black mb-4 truncate" title={title}>
                 {title}
             </h3>
 
-            {/* Vurgulanmış Bilgi Kutuları */}
             <div className="flex flex-col gap-4 mb-6 px-1">
                 <div className="bg-brutalBlack text-accentMain p-4 border-brutal border-accentMain transform -rotate-1 hover:rotate-0 transition-transform">
                     <p className="font-mono text-xs font-bold mb-1 opacity-80 text-white uppercase tracking-widest">Owner Stake</p>
@@ -73,7 +70,6 @@ export default function ProjectCard({ id, title, ownerStake, goal, funded }: Pro
             <div className="flex-grow mt-auto flex flex-col justify-end">
                 <div className="mb-2">
                     <p className="font-mono text-xs font-bold mb-1 uppercase">Progress</p>
-                    {/* İlerleme Çubuğu - Brutalist Stil: Kalın siyah sınır, neon yeşil dolgu */}
                     <div className="w-full h-8 border-brutal border-brutalBlack bg-zinc-800 relative">
                         <div
                             className="h-full bg-accentHover border-r-brutal border-brutalBlack"
@@ -87,7 +83,6 @@ export default function ProjectCard({ id, title, ownerStake, goal, funded }: Pro
                     <span className="bg-brutalBlack text-white px-2 py-0.5">{progressPercent}%</span>
                 </div>
 
-                {/* Yatırım Butonu */}
                 <button
                     onClick={handleInvest}
                     className={`brutal-btn w-full flex justify-between items-center group transition-all duration-200 ${(!isConnected || isSubmitting) ? "opacity-50 grayscale cursor-not-allowed" : ""}`}

@@ -39,7 +39,6 @@ export default function Home() {
             <h2 className="text-5xl font-black">ACTIVE CAMPAIGNS</h2>
           </div>
 
-          {/* Grid Layout Brutalist Kartlar İçin */}
           {loading ? (
             <div className="font-mono text-2xl animate-pulse">LOADING PROTOCOLS...</div>
           ) : (

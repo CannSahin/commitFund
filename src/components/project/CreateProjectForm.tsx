@@ -29,7 +29,6 @@ export default function CreateProjectForm() {
             setFormData({ title: "", goal: "", stake: "" });
         } catch (error: any) {
             console.error("Proje oluşturma hatası:", error);
-            // Freighter tarafında "User Rejected" gibi hataları yakalayıp düzgünce gösterelim
             if (error.message && error.message.includes("User declined")) {
                 alert("İşlem kullanıcı tarafından reddedildi.");
             } else {
@@ -45,7 +44,6 @@ export default function CreateProjectForm() {
             <h3 className="text-4xl font-black mb-8 border-b-brutal border-brutalBlack pb-4">Start a Campaign</h3>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                {/* Proje Başlığı */}
                 <div className="flex flex-col gap-2">
                     <label htmlFor="title" className="font-mono font-bold text-lg">Project Title</label>
                     <input
@@ -59,7 +57,6 @@ export default function CreateProjectForm() {
                     />
                 </div>
 
-                {/* Hedef Miktar */}
                 <div className="flex flex-col gap-2">
                     <label htmlFor="goal" className="font-mono font-bold text-lg">Funding Goal (XLM)</label>
                     <input
@@ -73,7 +70,6 @@ export default function CreateProjectForm() {
                     />
                 </div>
 
-                {/* Stake Miktarı - Özel Brutalist Vurgu */}
                 <div className="flex flex-col gap-2 bg-accentMain border-brutal border-brutalBlack p-6 mt-4 relative">
                     <div className="absolute -top-4 -right-4 bg-brutalBlack text-white font-mono px-3 py-1 text-sm font-bold transform rotate-3">
                         SKIN IN THE GAME

@@ -10,7 +10,6 @@ export default function HeroSection() {
                     Invest with Accountability
                 </h2>
 
-                {/* Vurgulayıcı brutalist kutu */}
                 <div className="bg-brutalBlack text-brutalWhite border-brutal border-accentMain p-4 md:p-6 w-full max-w-2xl transform rotate-1 hover:rotate-0 transition-transform">
                     <p className="font-mono text-xl md:text-2xl font-bold">
                         No stake? No campaign. Owners must put their own XLM on the line.

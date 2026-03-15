@@ -8,7 +8,6 @@ export default function Navbar() {
     const { isConnected, truncatedPublicKey, connect, disconnect, isFreighterInstalled } = useWallet();
 
     return (
-        // Kalın alt sınır ve arka plan rengi ile retro görüntüsü veriyoruz
         <nav className="w-full border-b-brutal border-brutalBlack bg-base flex items-center justify-between px-6 py-4">
             <Link href="/">
                 <h1 className="text-3xl font-black tracking-tighter uppercase cursor-pointer hover:text-accentHover transition-colors">
